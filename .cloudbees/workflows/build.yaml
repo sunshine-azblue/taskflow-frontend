@@ -1,0 +1,40 @@
+apiVersion: automation.cloudbees.io/v1alpha1
+kind: workflow
+name: build
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    outputs:
+      artifact-id:
+        value: ${{ jobs.build.outputs.artifact-id }}
+      version:
+        value: ${{ jobs.build.outputs.version }}
+
+jobs:
+  build:
+    outputs:
+      artifact-id: frontend-artifact-${{ cloudbees.version }}
+      version: ${{ cloudbees.version }}
+    steps:
+      - name: Check out
+        uses: cloudbees-io/checkout@v2
+
+      - name: Install and build
+        uses: docker://node:18-slim
+        run: |
+          npm install
+          npm run build
+
+      - name: Register build artifact
+        uses: cloudbees-io/register-build-artifacts@main
+        with:
+          artifact-metadata: |
+            [
+              {
+                "name": "docker.io/mock/frontend",
+                "version": "${{ cloudbees.version }}",
+                "url": "docker.io/mock/frontend:${{ cloudbees.version }}",
+                "type": "docker"
+              }
+            ]
